@@ -1,0 +1,12 @@
+https://github.com/rcore-os/tgoskits/actions/runs/25846408176
+https://github.com/insi-university/L1D---Detection-IA/tree/main
+https://github.com/Isaiah1810/Yolov5-for-Orange-Pi-5-Plus
+https://github.com/Aleksey3ltt/yolo_rockchip_3588s
+https://github.com/ultralytics/ultralytics/issues/18928
+https://github.com/ultralytics/ultralytics/issues/23404
+
+
+https://github.com/ret7020/YoloNPU
+
+
+
