@@ -1,0 +1,3 @@
+Orangepi5_1.2.2_debian_bookworm_desktop_xfce_linux6.1.99
+Orangepi5_1.2.2_ubuntu_jammy_desktop_gnome_linux5.10.160
+Orangepi5_1.2.2_ubuntu_jammy_desktop_xfce_linux6.1.99
