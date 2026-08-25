@@ -1,0 +1,310 @@
+Find on final readme the hardware and software note
+# Environment Setup
+Update the package list and install the required packages:
+
+sudo su
+sudo apt update
+sudo apt install -y build-essential cmake pkg-config git wget curl python3 python3-pip python3-numpy python3-mako python3-yaml python3-click python3-click-plugins libboost-all-dev libfftw3-dev libgmp-dev libusb-1.0-0-dev libudev-dev liborc-0.4-dev libspdlog-dev doxygen graphviz libpcap-dev libgtk-4-dev gnuradio gnuradio-dev
+sudo apt install -y libiio-dev libiio-utils python3-libiio libad9361-dev
+
+# add this orangepi
+sudo apt install libsndfile1 libsndfile1-dev python3-six at-spi2-core 
+
+
+# Build and Install gr-dvbs2
+
+cd ~
+mkdir -p src
+cd ~/src
+# git clone https://github.com/drmpeg/gr-dvbs2.git
+git clone https://github.com/SitrakaResearchAndPOC/fork_gr-dvbs2
+cd ~/src/gr-dvbs2
+mkdir -p build
+cd build
+cmake ..
+make -j$(nproc)
+sudo make install
+sudo ldconfig
+
+# Clone the Transceiver Repository
+
+cd ~/src
+# git clone https://github.com/shinji-y-jp/rpi-dvbs2-transceiver-gui.git
+git clone https://github.com/SitrakaResearchAndPOC/fork_rpi-dvbs2-transceiver-gui
+ls
+cd rpi-dvbs2-transceiver-gui/
+ls
+cd ..
+cd ~/src
+# git clone https://github.com/igorauad/gr-dvbs2rx.git
+git clone https://github.com/SitrakaResearchAndPOC/fork_gr-dvbs2rx
+cd ~/src/gr-dvbs2rx
+# git clone https://github.com/google/cpu_features.git
+git clone https://github.com/SitrakaResearchAndPOC/fork_cpu_features
+git apply ~/src/rpi-dvbs2-transceiver-gui/gr-dvbs2rx_reset_fixes.patch
+HEADER="include/gnuradio/dvbs2rx/symbol_sync_cc.h"
+BINDING="python/dvbs2rx/bindings/symbol_sync_cc_python.cc"
+HASH=$(md5sum "$HEADER" | awk '{print $1}')
+sed -i -E "s/BINDTOOL_HEADER_FILE_HASH\([0-9a-fA-F]+\)/BINDTOOL_HEADER_FILE_HASH(${HASH})/" "$BINDING"
+mkdir -p build
+cd build
+cmake ..
+make -j$(nproc)
+sudo make install
+sudo ldconfig
+
+
+# Build the Transceiver GUI
+
+cd ~/src/rpi-dvbs2-transceiver-gui
+mkdir -p data
+chmod +x *.py
+chmod +x *.sh
+
+# add this modification 
+sed -i 's/G_APPLICATION_DEFAULT_FLAGS/G_APPLICATION_FLAGS_NONE/g' main4.c
+ 
+make clean
+make
+# pkg-config --modversion gtk4
+# pkg-config --modversion glib-2.0
+
+
+Run 
+
+./app
+
+
+
+*************************************************************************************************************************************
+
+Sample Image Transmission
+The files:
+
+ume.JPG
+experiment.sh.ume
+are included as a simple DVB-S2 still-image transmission example.
+
+Rename:
+
+experiment.sh.ume
+to:
+
+experiment.sh
+and run the script.
+
+The transmitter will send the JPEG image named:
+
+ume.JPG
+The included ume.JPG is a photograph of Japanese plum blossoms taken by Shinji Yamazaki.
+
+In Japan, plum blossoms are traditionally regarded as one of the beautiful signs that early spring is approaching.
+
+Using Your Own Image
+You can replace the sample photograph with your own JPEG image.
+
+Rename your JPEG image to:
+
+ume.JPG
+place it in the same directory, and run:
+
+./experiment.sh
+This provides a simple way to transmit your own still image using the DVB-S2 transmitter.
+KISS Appliance Setup
+The following procedure converts a tested Raspberry Pi 5 installation into a simple appliance-style system.
+
+Reference environment:
+
+Raspberry Pi 5 2GB
+Raspberry Pi OS 64-bit Desktop
+Official Raspberry Pi 7-inch touchscreen
+USB mouse
+Pluto Plus USB
+Logitech C920 with H.264 hardware encoder
+USB audio
+Wired Ethernet
+1. Update System
+sudo apt update
+sudo apt upgrade -y
+2. Enable Desktop Auto Login
+Run:
+
+sudo raspi-config
+Select:
+
+System Options
+  -> Boot / Auto Login
+  -> Desktop Autologin
+Exit without rebooting yet.
+
+3. Check the DVB-S2 Application
+cd ~/src/rpi-dvbs2-transceiver-gui
+
+pwd
+ls -l
+4. Create Appliance Startup Script
+cat > ~/start-dvbs2-appliance.sh <<'EOF'
+#!/bin/bash
+
+sleep 5
+
+cd /home/pi/src/rpi-dvbs2-transceiver-gui || exit 1
+
+./app
+EOF
+
+chmod +x ~/start-dvbs2-appliance.sh
+5. Create Desktop Autostart Directory
+mkdir -p ~/.config/autostart
+6. Register DVB-S2 GUI for Automatic Startup
+cat > ~/.config/autostart/dvbs2-appliance.desktop <<'EOF'
+[Desktop Entry]
+Type=Application
+Name=DVB-S2 KISS UI
+Exec=/home/pi/start-dvbs2-appliance.sh
+Terminal=false
+X-GNOME-Autostart-enabled=true
+EOF
+7. Check Autostart Configuration
+cat ~/start-dvbs2-appliance.sh
+
+cat ~/.config/autostart/dvbs2-appliance.desktop
+8. Disable Wi-Fi
+sudo rfkill block wifi
+9. Disable Bluetooth if Not Required
+sudo rfkill block bluetooth
+10. Check Wired Ethernet
+ip addr show
+
+ip route
+11. Check Pluto Plus USB
+iio_info -s
+12. Check Logitech C920
+v4l2-ctl --list-devices
+13. Check USB Audio
+aplay -l
+
+arecord -l
+14. Reboot and Test Appliance Startup
+sudo reboot
+After reboot, confirm:
+
+Desktop Auto Login
+DVB-S2 KISS UI Auto Start
+Pluto Plus USB
+Logitech C920
+USB Audio
+Wired Ethernet
+Then test the reference configuration:
+
+Symbol Rate : 333 kSym/s
+MODCOD      : QPSK 1/2
+Pilot       : ON
+Roll-off    : 0.20
+Watchdog    : ON
+Verify both TX and RX.
+
+Golden Master Final Cleanup
+Perform the following steps only after all appliance tests have passed.
+
+Clear Shell History
+history -c
+rm -f ~/.bash_history
+Clean APT Cache
+sudo apt clean
+Clean User Cache
+rm -rf ~/.cache/*
+Remove SSH Host Keys
+sudo rm -f /etc/ssh/ssh_host_*
+Reset machine-id
+sudo truncate -s 0 /etc/machine-id
+
+sudo rm -f /var/lib/dbus/machine-id
+
+sudo ln -s /etc/machine-id /var/lib/dbus/machine-id
+Check Disk Usage
+df -h
+Shutdown the Golden Master
+sudo poweroff
+DO NOT BOOT THIS SD CARD AGAIN BEFORE CREATING THE DISTRIBUTION IMAGE.
+
+After shutdown:
+
+Remove the SD card.
+Create the distribution image from the SD card.
+Preserve the original Golden Master.
+
+
+
+
+
+
+
+
+*************************************************************************************************************************************
+Information software / hardware tested on this installation 
+
+# i use orangepi jammy
+orangepi@orangepi5:~/actions-runner$ sudo lscpu
+Architecture:           aarch64
+  CPU op-mode(s):       32-bit, 64-bit
+  Byte Order:           Little Endian
+CPU(s):                 8
+  On-line CPU(s) list:  0-7
+Vendor ID:              ARM
+  Model name:           Cortex-A55
+    Model:              0
+    Thread(s) per core: 1
+    Core(s) per socket: 4
+    Socket(s):          1
+    Stepping:           r2p0
+    CPU max MHz:        1800.0000
+    CPU min MHz:        408.0000
+    BogoMIPS:           48.00
+    Flags:              fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm lrcpc dcpop asimddp
+  Model name:           Cortex-A76
+    Model:              0
+    Thread(s) per core: 1
+    Core(s) per socket: 2
+    Socket(s):          2
+    Stepping:           r4p0
+    CPU max MHz:        2400.0000
+    CPU min MHz:        408.0000
+    BogoMIPS:           48.00
+    Flags:              fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm lrcpc dcpop asimddp
+Caches (sum of all):    
+  L1d:                  384 KiB (8 instances)
+  L1i:                  384 KiB (8 instances)
+  L2:                   2.5 MiB (8 instances)
+  L3:                   3 MiB (1 instance)
+Vulnerabilities:        
+  Itlb multihit:        Not affected
+  L1tf:                 Not affected
+  Mds:                  Not affected
+  Meltdown:             Not affected
+  Mmio stale data:      Not affected
+  Retbleed:             Not affected
+  Spec store bypass:    Mitigation; Speculative Store Bypass disabled via prctl
+  Spectre v1:           Mitigation; __user pointer sanitization
+  Spectre v2:           Vulnerable: Unprivileged eBPF enabled
+  Srbds:                Not affected
+  Tsx async abort:      Not affected
+  
+  
+  
+i use OS : 
+---------  
+orangepi@orangepi5:~/actions-runner$ cat /etc/os-release
+PRETTY_NAME="Orange Pi 1.2.2 Jammy"
+NAME="Ubuntu"
+VERSION_ID="22.04"
+VERSION="22.04.5 LTS (Jammy Jellyfish)"
+VERSION_CODENAME=jammy
+ID=ubuntu
+ID_LIKE=debian
+HOME_URL="https://www.ubuntu.com/"
+SUPPORT_URL="https://help.ubuntu.com/"
+BUG_REPORT_URL="https://bugs.launchpad.net/ubuntu/"
+PRIVACY_POLICY_URL="https://www.ubuntu.com/legal/terms-and-policies/privacy-policy"
+UBUNTU_CODENAME=jammy
+orangepi@orangepi5:~/actions-runner$ 
